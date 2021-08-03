@@ -7,8 +7,8 @@ import math
 # 洛伦兹水车 欧拉法
 class Water_Wheel():
     def __init__(self):
-        self.max_interation = 100000   # q 最大迭代次数
-        self.step_interval = 0.001  # h 步长 s
+        self.max_interation = 10000   # q 最大迭代次数
+        self.step_interval = 0.01  # h 步长 s
         self.bucket_num = 13  # N 桶数量
         self.inject_speed = 70  # Q 注入速度 l/s
         self.leak_speed_ratio = 1  # k 相对出水速度比率 100percent/s
@@ -26,8 +26,10 @@ class Water_Wheel():
         self.barycenter_plot_x = []
         self.barycenter_plot_y = []
 
+        self.checked_bucket = 0
+
     def plot(self):
-        for i in range(self.max_interation):
+        for j in range(self.max_interation):
             checked_bucket = max(enumerate([math.sin(angle) for angle in self.bucket_angles]), key=lambda x: x[-1])[0]  # 获得最上方水桶编号
             self.bucket_weight = [i * math.exp(- self.leak_speed_ratio * self.step_interval) for i in self.bucket_weight]  # 水桶漏水
             self.bucket_weight[checked_bucket] = (self.bucket_weight[checked_bucket] + self.inject_speed * self.step_interval) * \
@@ -49,14 +51,32 @@ class Water_Wheel():
         plt.plot(self.barycenter_plot_x, self.barycenter_plot_y)
         plt.show()
 
-    #def __iter__(self):
-    #    return self
+    def water_wheel_generate(self):
+        self.checked_bucket = checked_bucket = max(enumerate([math.sin(angle) for angle in self.bucket_angles]), key=lambda x: x[-1])[0]  # 获得最上方水桶编号
+        self.bucket_weight = [i * math.exp(- self.leak_speed_ratio * self.step_interval) for i in self.bucket_weight]  # 水桶漏水
+        self.bucket_weight[checked_bucket] = (self.bucket_weight[checked_bucket] + self.inject_speed * self.step_interval) * \
+                                             math.exp(- self.leak_speed_ratio * self.step_interval)  # 水桶加水
+        self.bucket_angles = [(i + self.angular_velocity * self.step_interval) % (2*math.pi) for i in self.bucket_angles]  # 水桶角度位移
+        self.angular_velocity += self.step_interval * self.angular_acceleration  # 计算下一时刻角速度
+        self.water_wheel_weight = sum(self.bucket_weight) + self.wheel_weight  # 水车总质量
+        for i in range(self.bucket_num):
+            self.water_wheel_barycenter[0] += self.bucket_weight[i] * math.cos(self.bucket_angles[i])  # 计算质心x坐标
+            self.water_wheel_barycenter[1] += self.bucket_weight[i] * math.sin(self.bucket_angles[i])  # 计算质心x坐标
+        self.water_wheel_barycenter = [(i * self.wheel_radius / self.water_wheel_weight) for i in self.water_wheel_barycenter]
+        self.angular_acceleration = -1 * (self.gravity * self.water_wheel_barycenter[0] + self.damping *
+                                          self.angular_velocity / self.water_wheel_weight) / pow(self.wheel_radius, 2)  # 下一时刻角加速度
+        self.barycenter_plot_x.append(self.water_wheel_barycenter[0])
+        self.barycenter_plot_y.append(self.water_wheel_barycenter[1])
 
-    #def __next__(self):
+        #print('done')
+        yield self.water_wheel_barycenter
 
 if __name__ == '__main__':
     water_wheel = Water_Wheel()
     water_wheel.plot()
+    #print(next(water_wheel.water_wheel_generate()))
+    #print(next(water_wheel.water_wheel_generate()))
+    #print(next(water_wheel.water_wheel_generate()))
 
 
 
